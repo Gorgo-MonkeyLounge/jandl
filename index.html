@@ -5,13 +5,13 @@
 		<script src="publication-web-resources/script/main.js" type="text/javascript"></script>
         
         <style>
-            /* 1. Light Grey Background */
+            /* 1. Main Window Settings */
             body, html {
                 margin: 0;
                 padding: 0;
                 width: 100%;
                 height: 100%;
-                background-color: #f0f0f0; /* Very Light Grey */
+                background-color: #fafafa; /* Very Light Grey (Almost White) */
                 overflow: hidden; 
             }
 
@@ -32,31 +32,35 @@
                 // Get the document inside the iframe
                 var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
                 
-                // Create a style element to override InDesign defaults
+                // Create a style element
                 var style = innerDoc.createElement('style');
                 style.innerHTML = `
-                    /* Set background of the publication to transparent so our light grey shows */
+                    /* 1. Turn the internal body into a Flex container */
                     body {
                         background-color: transparent !important;
                         display: flex !important;
                         justify-content: center !important;
+                        align-items: center !important;
                         width: 100vw !important;
-                        overflow-x: hidden !important;
+                        height: 100vh !important;
+                        margin: 0 !important;
+                        overflow: hidden !important;
                     }
 
                     /* 
-                       STRONG CENTERING:
-                       This targets specific divs InDesign creates (usually id="container").
-                       We force it to move 50% to the right, then shift it back 50% of its own width.
+                       2. TARGET THE WRAPPER DIV 
+                       We target "body > div" to grab that first container you found.
+                       We force it to stop being absolute and reset its transform.
                     */
-                    div[id^="container"], #main, .page, div[style*="position: absolute"] {
+                    body > div {
                         position: relative !important;
                         left: auto !important;
-                        margin-left: auto !important;
-                        margin-right: auto !important;
+                        top: auto !important;
+                        transform: none !important; /* Removes the translate(0,0) */
+                        margin: auto !important;
                         
-                        /* If the element is still stuck, this next line is the "Nuclear Option" */
-                        /* transform: translateX(0) !important; */
+                        /* Optional: Adds a soft shadow so the page pops out */
+                        box-shadow: 0 0 30px rgba(0,0,0,0.1); 
                     }
                 `;
                 innerDoc.head.appendChild(style);
@@ -64,7 +68,7 @@
         </script>
 	</head>
     
-    <!-- We run the centering script when the iframe finishes loading -->
+    <!-- We delay the centering slightly (100ms) to ensure InDesign has finished its setup -->
 	<body onload="showHideArrows()">
 		<iframe onload="showHideArrows(); setTimeout(forceCenterLayout, 100);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
 		
