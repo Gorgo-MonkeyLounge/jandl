@@ -8,7 +8,7 @@
 		<link href="publication-web-resources/css/main.css" rel="stylesheet" type="text/css">
 		<script src="publication-web-resources/script/main.js" type="text/javascript"></script>
 
-		<!-- 2. NEW STYLES TO FIX LAYOUT & HIDE GHOST RECTANGLE -->
+		<!-- 2. STYLES FOR THE MAIN WINDOW -->
 		<style>
 			body, html {
 				margin: 0;
@@ -27,54 +27,46 @@
 				width: 100%;
 				height: 100%;
 				border: none;
-				z-index: 1; /* Below the arrows */
+				z-index: 1; 
 			}
 
-			/* CRITICAL FIX: Hide the Dummy Iframe (The small rectangle) */
+			/* HIDE THE GHOST RECTANGLE */
 			#dummyIFrame {
-				position: absolute;
-				top: -9999px;
-				left: -9999px;
-				width: 1px;
-				height: 1px;
-				opacity: 0;
-				visibility: hidden;
-				border: none;
 				display: none !important;
+				width: 0;
+				height: 0;
+				visibility: hidden;
 			}
 
-			/* Ensure Arrows are on top */
+			/* Arrows on top */
 			.prev, .next {
 				z-index: 9999;
 			}
 		</style>
 
-		<!-- 3. SCRIPT TO CENTER PAGES AND FIX VIDEO -->
+		<!-- 3. SCRIPT TO FIX CENTER, VIDEO, AND CLIPPED BUTTONS -->
 		<script>
-			// This function runs every time a new page loads in the iframe
 			function applyCustomFixes() {
 				var iframe = document.getElementById("contentIFrame");
 				
-				// Wait slightly to ensure InDesign content is ready
+				// 200ms delay to allow InDesign content to render
 				setTimeout(function() {
 					try {
 						var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
 						
-						// --- A. CENTER THE PAGE ---
-						// We look for the first main div inside the iframe body
+						// --- A. CENTER THE PAGE & FIX CLIPPED BUTTONS ---
 						var mainDiv = innerDoc.querySelector('body > div');
 						
 						if (mainDiv) {
-							// Get the width/height InDesign set for the page
 							var w = parseFloat(mainDiv.style.width) || mainDiv.offsetWidth || 595;
 							var h = parseFloat(mainDiv.style.height) || mainDiv.offsetHeight || 842;
 							
 							var halfW = w / 2;
 							var halfH = h / 2;
 
-							// Inject CSS into the iframe to center that specific div
 							var style = innerDoc.createElement('style');
 							style.innerHTML = `
+								/* 1. Center the publication */
 								body { 
 									background-color: transparent !important; 
 									overflow: hidden !important; 
@@ -82,7 +74,6 @@
 									height: 100vh !important;
 									width: 100vw !important;
 								}
-								/* Center the container using absolute positioning + negative margins */
 								body > div:first-child {
 									position: absolute !important;
 									left: 50% !important;
@@ -92,8 +83,14 @@
 									box-shadow: 0 0 30px rgba(0,0,0,0.1); 
 									transform-origin: center center !important;
 								}
-								
-								/* VIDEO POPUP STYLES */
+
+								/* 2. FIX CLIPPED BUTTON EDGES (New Code) */
+								/* This tells the browser: Let the content spill out of the box if needed */
+								div[id^="_idContainer"], ._idGenButton, ._idGenButton div {
+									overflow: visible !important;
+								}
+
+								/* 3. Video Popup Styles */
 								#videoModalOverlay {
 									position: fixed; top: 0; left: 0; width: 100%; height: 100%;
 									background: rgba(0,0,0,0.85); z-index: 10000;
@@ -118,12 +115,10 @@
 							var videoSrc = originalVideo.querySelector('source') ? originalVideo.querySelector('source').src : originalVideo.src;
 							var videoContainer = originalVideo.parentNode;
 
-							// Hide original video, keep the poster image visible
 							originalVideo.style.display = 'none';
 							videoContainer.style.cursor = 'pointer';
 							videoContainer.setAttribute('title', 'Play Video');
 
-							// Create Modal
 							var modalDiv = innerDoc.createElement('div');
 							modalDiv.innerHTML = `
 								<div id="videoModalOverlay">
@@ -137,7 +132,6 @@
 							`;
 							innerDoc.body.appendChild(modalDiv);
 
-							// Click handlers
 							videoContainer.onclick = function() {
 								var overlay = innerDoc.getElementById('videoModalOverlay');
 								var popupVid = innerDoc.getElementById('popupVideo');
@@ -157,20 +151,15 @@
 					} catch(e) {
 						console.log("Waiting for content...");
 					}
-				}, 200); // 200ms delay to make sure InDesign elements exist
+				}, 200); 
 			}
 		</script>
 	</head>
 	
-	<!-- 4. ONLOAD EVENT: Load Arrows AND Apply Fixes -->
+	<!-- 4. LOAD EVERYTHING -->
 	<body onload="showHideArrows(); applyCustomFixes();">
-		
-		<!-- Added applyCustomFixes() here too, so it runs when you click Next/Prev -->
 		<iframe onload="showHideArrows(); applyCustomFixes();" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
-		
-		<!-- Added inline styles to force hide this frame -->
-		<iframe id="dummyIFrame" class="dummyFrameClass" style="display:none; visibility:hidden; width:0; height:0;"></iframe>
-		
+		<iframe id="dummyIFrame" class="dummyFrameClass" style="display:none !important;"></iframe>
 		<div class="prev" onclick="showPreviousPage()">&#10094;</div>
 		<div class="next" onclick="showNextPage()">&#10095;</div>
 	</body>
