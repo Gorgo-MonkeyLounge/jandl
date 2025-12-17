@@ -44,7 +44,7 @@
 			}
 		</style>
 
-		<!-- 3. SCRIPT TO FIX CENTER, VIDEO, AND CLIPPED BUTTONS -->
+		<!-- 3. SCRIPT TO FIX CENTER, VIDEO, AND CROP -->
 		<script>
 			function applyCustomFixes() {
 				var iframe = document.getElementById("contentIFrame");
@@ -54,7 +54,7 @@
 					try {
 						var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
 						
-						// --- A. CENTER THE PAGE & FIX CLIPPED BUTTONS ---
+						// --- A. CENTER THE PAGE ---
 						var mainDiv = innerDoc.querySelector('body > div');
 						
 						if (mainDiv) {
@@ -73,7 +73,6 @@
 									height: 100vh !important;
 									width: 100vw !important;
 								}
-								/* Use specific selector for the main wrapper to avoid conflicts */
 								body > div:first-child {
 									position: absolute !important;
 									left: 50% !important;
@@ -82,18 +81,21 @@
 									margin-top: -${halfH}px !important;
 									box-shadow: 0 0 30px rgba(0,0,0,0.1); 
 									transform-origin: center center !important;
-									overflow: visible !important; /* Allow buttons to pop out */
+									overflow: visible !important;
 								}
 
-								/* 2. FIX CLIPPED BUTTON EDGES (UPDATED) */
-								/* We select everything inside the buttons and force it to show */
-								div[id^="_idContainer"], 
-								._idGenButton, 
-								._idGenButton div, 
-								._idGenButton img,
-								._idGenButton p {
+								/* 2. FIX CROPPED BUTTONS (THE "MISSING PIXELS" FIX) */
+								/* This forces background images to fit exactly inside the box */
+								div[id^="_idContainer"] {
+									background-size: 100% 100% !important;
 									overflow: visible !important;
-									clip: auto !important;
+								}
+								
+								/* Also ensure images inside buttons are not cut off */
+								._idGenButton img {
+									max-width: none !important;
+									width: 100% !important;
+									height: 100% !important;
 								}
 
 								/* 3. Video Popup Styles */
@@ -121,39 +123,42 @@
 							var videoSrc = originalVideo.querySelector('source') ? originalVideo.querySelector('source').src : originalVideo.src;
 							var videoContainer = originalVideo.parentNode;
 
-							originalVideo.style.display = 'none';
-							videoContainer.style.cursor = 'pointer';
-							videoContainer.setAttribute('title', 'Play Video');
+							// Only setup if not already hidden (prevents double setup on reload)
+							if (originalVideo.style.display !== 'none') {
+								originalVideo.style.display = 'none';
+								videoContainer.style.cursor = 'pointer';
+								videoContainer.setAttribute('title', 'Play Video');
 
-							// Avoid creating duplicate modals if script runs twice
-							if (!innerDoc.getElementById('videoModalOverlay')) {
-								var modalDiv = innerDoc.createElement('div');
-								modalDiv.innerHTML = `
-									<div id="videoModalOverlay">
-										<div class="modal-content">
-											<button class="close-btn" id="btnCloseVid">CLOSE X</button>
-											<video id="popupVideo" controls>
-												<source src="${videoSrc}" type="video/mp4">
-											</video>
+								// Check if modal already exists to avoid duplicates
+								if (!innerDoc.getElementById('videoModalOverlay')) {
+									var modalDiv = innerDoc.createElement('div');
+									modalDiv.innerHTML = `
+										<div id="videoModalOverlay">
+											<div class="modal-content">
+												<button class="close-btn" id="btnCloseVid">CLOSE X</button>
+												<video id="popupVideo" controls>
+													<source src="${videoSrc}" type="video/mp4">
+												</video>
+											</div>
 										</div>
-									</div>
-								`;
-								innerDoc.body.appendChild(modalDiv);
+									`;
+									innerDoc.body.appendChild(modalDiv);
 
-								videoContainer.onclick = function() {
-									var overlay = innerDoc.getElementById('videoModalOverlay');
-									var popupVid = innerDoc.getElementById('popupVideo');
-									overlay.classList.add('active');
-									popupVid.currentTime = 0;
-									popupVid.play();
-								};
+									videoContainer.onclick = function() {
+										var overlay = innerDoc.getElementById('videoModalOverlay');
+										var popupVid = innerDoc.getElementById('popupVideo');
+										overlay.classList.add('active');
+										popupVid.currentTime = 0;
+										popupVid.play();
+									};
 
-								innerDoc.getElementById('btnCloseVid').onclick = function() {
-									var overlay = innerDoc.getElementById('videoModalOverlay');
-									var popupVid = innerDoc.getElementById('popupVideo');
-									overlay.classList.remove('active');
-									popupVid.pause();
-								};
+									innerDoc.getElementById('btnCloseVid').onclick = function() {
+										var overlay = innerDoc.getElementById('videoModalOverlay');
+										var popupVid = innerDoc.getElementById('popupVideo');
+										overlay.classList.remove('active');
+										popupVid.pause();
+									};
+								}
 							}
 						}
 
