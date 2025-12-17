@@ -44,7 +44,7 @@
 			}
 		</style>
 
-		<!-- 3. SCRIPT TO FIX CENTER, VIDEO, AND CROP -->
+		<!-- 3. SCRIPT TO FIX CENTER, VIDEO, CROP, AND COLOR -->
 		<script>
 			function applyCustomFixes() {
 				var iframe = document.getElementById("contentIFrame");
@@ -84,21 +84,24 @@
 									overflow: visible !important;
 								}
 
-								/* 2. FIX CROPPED BUTTONS (THE "MISSING PIXELS" FIX) */
-								/* This forces background images to fit exactly inside the box */
+								/* 2. FIX CROPPED BUTTONS */
 								div[id^="_idContainer"] {
 									background-size: 100% 100% !important;
 									overflow: visible !important;
 								}
-								
-								/* Also ensure images inside buttons are not cut off */
 								._idGenButton img {
 									max-width: none !important;
 									width: 100% !important;
 									height: 100% !important;
 								}
 
-								/* 3. Video Popup Styles */
+								/* 3. COLOR THE HEADLINE RED (New Code) */
+								/* Targets "JANDL", "calling", "GORGO" specifically */
+								#_idTextSpan109, #_idTextSpan110, #_idTextSpan111 {
+									color: #e31f26 !important; 
+								}
+
+								/* 4. Video Popup Styles */
 								#videoModalOverlay {
 									position: fixed; top: 0; left: 0; width: 100%; height: 100%;
 									background: rgba(0,0,0,0.85); z-index: 10000;
@@ -123,13 +126,11 @@
 							var videoSrc = originalVideo.querySelector('source') ? originalVideo.querySelector('source').src : originalVideo.src;
 							var videoContainer = originalVideo.parentNode;
 
-							// Only setup if not already hidden (prevents double setup on reload)
 							if (originalVideo.style.display !== 'none') {
 								originalVideo.style.display = 'none';
 								videoContainer.style.cursor = 'pointer';
 								videoContainer.setAttribute('title', 'Play Video');
 
-								// Check if modal already exists to avoid duplicates
 								if (!innerDoc.getElementById('videoModalOverlay')) {
 									var modalDiv = innerDoc.createElement('div');
 									modalDiv.innerHTML = `
