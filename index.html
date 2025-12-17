@@ -5,118 +5,90 @@
 		<script src="publication-web-resources/script/main.js" type="text/javascript"></script>
         
         <style>
-            /* MAIN WINDOW SETTINGS */
+            /* 1. PARENT PAGE STYLING */
             body, html {
                 margin: 0;
                 padding: 0;
                 width: 100%;
                 height: 100%;
-                background-color: #fafafa; /* Light Grey Background */
+                background-color: #f7f7f7; /* Very light grey */
+                display: flex;            /* Enables centering */
+                justify-content: center;  /* Center horizontally */
+                align-items: center;      /* Center vertically */
                 overflow: hidden; 
             }
 
+            /* 2. OVERRIDE main.css for the iframe */
             #contentIFrame {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
+                position: relative !important; /* Change from absolute to allow flex centering */
+                box-shadow: 0 0 40px rgba(0,0,0,0.15);
+                background-color: white;
                 border: none;
+                /* Initial sizes (JS will refine these) */
+                width: 595px; 
+                height: 878px;
+                max-width: 95vw;
+                max-height: 95vh;
             }
+
+            /* Ensure arrows stay on top of everything */
+            .prev, .next { z-index: 100; }
         </style>
 
         <script>
-            function injectCustomScripts() {
+            function fixLayoutAndVideo() {
                 var iframe = document.getElementById("contentIFrame");
                 var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
                 
-                // --- 1. CENTER THE PUBLICATION (Same as before) ---
+                // --- STEP 1: RESIZE IFRAME TO MATCH CONTENT ---
+                // We find that div you found earlier
                 var mainDiv = innerDoc.querySelector('body > div');
                 if (mainDiv) {
-                    var w = parseFloat(mainDiv.style.width) || mainDiv.offsetWidth;
-                    var h = parseFloat(mainDiv.style.height) || mainDiv.offsetHeight;
-                    var halfW = w / 2;
-                    var halfH = h / 2;
-
-                    var style = innerDoc.createElement('style');
-                    style.innerHTML = `
-                        body { background-color: transparent !important; overflow: hidden !important; }
-                        body > div {
-                            position: absolute !important; left: 50% !important; top: 50% !important;
-                            margin-left: -${halfW}px !important; margin-top: -${halfH}px !important;
-                            box-shadow: 0 0 30px rgba(0,0,0,0.1); 
-                        }
-                        
-                        /* POPUP STYLES */
-                        #videoModalOverlay {
-                            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                            background: rgba(0,0,0,0.85); z-index: 9999;
-                            display: flex; justify-content: center; align-items: center;
-                            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-                        }
-                        #videoModalOverlay.active { opacity: 1; pointer-events: all; }
-                        .modal-content { position: relative; width: 80%; max-width: 900px; }
-                        .modal-content video { width: 100%; box-shadow: 0 0 20px #000; border-radius: 8px; }
-                        .close-btn {
-                            position: absolute; top: -40px; right: 0;
-                            color: white; font-size: 30px; cursor: pointer; font-family: sans-serif;
-                            background: none; border: none;
-                        }
-                    `;
-                    innerDoc.head.appendChild(style);
+                    var contentW = mainDiv.style.width || "595px";
+                    var contentH = mainDiv.style.height || "878px";
+                    
+                    // Apply the internal page size to the iframe itself
+                    iframe.style.width = contentW;
+                    iframe.style.height = contentH;
                 }
 
-                // --- 2. VIDEO POPUP LOGIC ---
-                // Find the first video element in the design
+                // --- STEP 2: VIDEO POPUP LOGIC ---
                 var originalVideo = innerDoc.querySelector('video');
-
                 if (originalVideo) {
-                    // Get the source URL of the video
                     var videoSrc = originalVideo.querySelector('source') ? originalVideo.querySelector('source').src : originalVideo.src;
-                    
-                    // Find the container holding the video
                     var videoContainer = originalVideo.parentNode;
 
-                    // HIDE the original video (so the image behind it shows)
+                    // Hide original video
                     originalVideo.style.display = 'none';
-
-                    // Make the container clickable
                     videoContainer.style.cursor = 'pointer';
-                    videoContainer.setAttribute('title', 'Click to play video');
 
-                    // Create the Modal HTML
-                    var modalHTML = `
-                        <div id="videoModalOverlay">
-                            <div class="modal-content">
-                                <button class="close-btn" onclick="closeVideoModal()">&#10005; Close</button>
-                                <video id="popupVideo" controls>
-                                    <source src="${videoSrc}" type="video/mp4">
-                                </video>
-                            </div>
-                        </div>
+                    // Inject Modal CSS into iframe
+                    var style = innerDoc.createElement('style');
+                    style.innerHTML = `
+                        #videoModal {
+                            position: fixed; top:0; left:0; width:100%; height:100%;
+                            background: rgba(0,0,0,0.9); z-index:9999;
+                            display:none; justify-content:center; align-items:center;
+                        }
+                        #videoModal.open { display:flex; }
+                        .close-vid { position:absolute; top:20px; right:20px; color:white; cursor:pointer; font-size:24px; font-family:sans-serif; }
+                        video#popupVid { width: 90%; max-height: 80%; border: 2px solid #444; }
                     `;
-                    // Add Modal to the page body
-                    var div = innerDoc.createElement('div');
-                    div.innerHTML = modalHTML;
-                    innerDoc.body.appendChild(div);
+                    innerDoc.head.appendChild(style);
 
-                    // --- CLICK EVENT: OPEN MODAL ---
+                    // Inject Modal HTML
+                    var modalDiv = innerDoc.createElement('div');
+                    modalDiv.id = "videoModal";
+                    modalDiv.innerHTML = `
+                        <div class="close-vid" onclick="document.getElementById('videoModal').classList.remove('open'); document.getElementById('popupVid').pause();">✕ CLOSE</div>
+                        <video id="popupVid" controls src="${videoSrc}"></video>
+                    `;
+                    innerDoc.body.appendChild(modalDiv);
+
+                    // Open Trigger
                     videoContainer.onclick = function() {
-                        var overlay = innerDoc.getElementById('videoModalOverlay');
-                        var popupVid = innerDoc.getElementById('popupVideo');
-                        
-                        overlay.classList.add('active'); // Show modal
-                        popupVid.currentTime = 0;        // Reset video
-                        popupVid.play();                 // Auto play
-                    };
-
-                    // --- FUNCTION TO CLOSE MODAL ---
-                    innerDoc.defaultView.closeVideoModal = function() {
-                        var overlay = innerDoc.getElementById('videoModalOverlay');
-                        var popupVid = innerDoc.getElementById('popupVideo');
-                        
-                        overlay.classList.remove('active'); // Hide modal
-                        popupVid.pause();                   // Stop video
+                        innerDoc.getElementById('videoModal').classList.add('open');
+                        innerDoc.getElementById('popupVid').play();
                     };
                 }
             }
@@ -124,10 +96,12 @@
 	</head>
     
 	<body onload="showHideArrows()">
-        <!-- Added longer delay (500ms) to ensure video tags are fully loaded before we hack them -->
-		<iframe onload="showHideArrows(); setTimeout(injectCustomScripts, 500);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
+        <!-- We use the iframe onload to trigger our fixes -->
+		<iframe onload="showHideArrows(); setTimeout(fixLayoutAndVideo, 300);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
 		
         <iframe id="dummyIFrame" class="dummyFrameClass"></iframe>
+        
+        <!-- Navigation Arrows -->
 		<div class="prev" onclick="showPreviousPage()">&#10094;</div>
 		<div class="next" onclick="showNextPage()">&#10095;</div>
 	</body>
