@@ -29,48 +29,58 @@
         <script>
             function forceCenterLayout() {
                 var iframe = document.getElementById("contentIFrame");
-                // Get the document inside the iframe
                 var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
                 
-                // Create a style element
-                var style = innerDoc.createElement('style');
-                style.innerHTML = `
-                    /* 1. Turn the internal body into a Flex container */
-                    body {
-                        background-color: transparent !important;
-                        display: flex !important;
-                        justify-content: center !important;
-                        align-items: center !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        margin: 0 !important;
-                        overflow: hidden !important;
-                    }
+                // Find the main InDesign container (the one with the width/height set)
+                // We look for the first div directly inside body
+                var mainDiv = innerDoc.querySelector('body > div');
+                
+                if (mainDiv) {
+                    // Read the width and height InDesign assigned to the page
+                    var w = parseFloat(mainDiv.style.width) || mainDiv.offsetWidth;
+                    var h = parseFloat(mainDiv.style.height) || mainDiv.offsetHeight;
 
-                    /* 
-                       2. TARGET THE WRAPPER DIV 
-                       We target "body > div" to grab that first container you found.
-                       We force it to stop being absolute and reset its transform.
-                    */
-                    body > div {
-                        position: relative !important;
-                        left: auto !important;
-                        top: auto !important;
-                        transform: none !important; /* Removes the translate(0,0) */
-                        margin: auto !important;
-                        
-                        /* Optional: Adds a soft shadow so the page pops out */
-                        box-shadow: 0 0 30px rgba(0,0,0,0.1); 
-                    }
-                `;
-                innerDoc.head.appendChild(style);
+                    // Calculate half sizes for centering
+                    var halfW = w / 2;
+                    var halfH = h / 2;
+
+                    // Create a style tag to inject safe centering CSS
+                    var style = innerDoc.createElement('style');
+                    style.innerHTML = `
+                        /* Make sure the iframe body is transparent so our grey background shows */
+                        body {
+                            background-color: transparent !important;
+                            overflow: hidden !important;
+                        }
+
+                        /* 
+                           SAFE CENTERING:
+                           1. We set position: absolute (restoring InDesign's default).
+                           2. We move the Starting Point to the exact center (left: 50%, top: 50%).
+                           3. We pull the page back by half its size using margins.
+                           
+                           *Crucially* we DO NOT touch 'transform', so animations still work!
+                        */
+                        body > div {
+                            position: absolute !important;
+                            left: 50% !important;
+                            top: 50% !important;
+                            margin-left: -${halfW}px !important;
+                            margin-top: -${halfH}px !important;
+                            
+                            /* Optional: Add a nice shadow */
+                            box-shadow: 0 0 30px rgba(0,0,0,0.1); 
+                        }
+                    `;
+                    innerDoc.head.appendChild(style);
+                }
             }
         </script>
 	</head>
     
-    <!-- We delay the centering slightly (100ms) to ensure InDesign has finished its setup -->
+    <!-- Delay slightly to ensure InDesign has created the divs before we measure them -->
 	<body onload="showHideArrows()">
-		<iframe onload="showHideArrows(); setTimeout(forceCenterLayout, 100);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
+		<iframe onload="showHideArrows(); setTimeout(forceCenterLayout, 200);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
 		
         <iframe id="dummyIFrame" class="dummyFrameClass"></iframe>
 		<div class="prev" onclick="showPreviousPage()">&#10094;</div>
