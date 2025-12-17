@@ -5,17 +5,16 @@
 		<script src="publication-web-resources/script/main.js" type="text/javascript"></script>
         
         <style>
-            /* 1. Main Window Settings */
+            /* MAIN WINDOW SETTINGS */
             body, html {
                 margin: 0;
                 padding: 0;
                 width: 100%;
                 height: 100%;
-                background-color: #fafafa; /* Very Light Grey (Almost White) */
+                background-color: #fafafa; /* Light Grey Background */
                 overflow: hidden; 
             }
 
-            /* 2. Make the iframe fill the screen */
             #contentIFrame {
                 position: absolute;
                 top: 0;
@@ -27,60 +26,106 @@
         </style>
 
         <script>
-            function forceCenterLayout() {
+            function injectCustomScripts() {
                 var iframe = document.getElementById("contentIFrame");
                 var innerDoc = iframe.contentDocument || iframe.contentWindow.document;
                 
-                // Find the main InDesign container (the one with the width/height set)
-                // We look for the first div directly inside body
+                // --- 1. CENTER THE PUBLICATION (Same as before) ---
                 var mainDiv = innerDoc.querySelector('body > div');
-                
                 if (mainDiv) {
-                    // Read the width and height InDesign assigned to the page
                     var w = parseFloat(mainDiv.style.width) || mainDiv.offsetWidth;
                     var h = parseFloat(mainDiv.style.height) || mainDiv.offsetHeight;
-
-                    // Calculate half sizes for centering
                     var halfW = w / 2;
                     var halfH = h / 2;
 
-                    // Create a style tag to inject safe centering CSS
                     var style = innerDoc.createElement('style');
                     style.innerHTML = `
-                        /* Make sure the iframe body is transparent so our grey background shows */
-                        body {
-                            background-color: transparent !important;
-                            overflow: hidden !important;
-                        }
-
-                        /* 
-                           SAFE CENTERING:
-                           1. We set position: absolute (restoring InDesign's default).
-                           2. We move the Starting Point to the exact center (left: 50%, top: 50%).
-                           3. We pull the page back by half its size using margins.
-                           
-                           *Crucially* we DO NOT touch 'transform', so animations still work!
-                        */
+                        body { background-color: transparent !important; overflow: hidden !important; }
                         body > div {
-                            position: absolute !important;
-                            left: 50% !important;
-                            top: 50% !important;
-                            margin-left: -${halfW}px !important;
-                            margin-top: -${halfH}px !important;
-                            
-                            /* Optional: Add a nice shadow */
+                            position: absolute !important; left: 50% !important; top: 50% !important;
+                            margin-left: -${halfW}px !important; margin-top: -${halfH}px !important;
                             box-shadow: 0 0 30px rgba(0,0,0,0.1); 
+                        }
+                        
+                        /* POPUP STYLES */
+                        #videoModalOverlay {
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.85); z-index: 9999;
+                            display: flex; justify-content: center; align-items: center;
+                            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+                        }
+                        #videoModalOverlay.active { opacity: 1; pointer-events: all; }
+                        .modal-content { position: relative; width: 80%; max-width: 900px; }
+                        .modal-content video { width: 100%; box-shadow: 0 0 20px #000; border-radius: 8px; }
+                        .close-btn {
+                            position: absolute; top: -40px; right: 0;
+                            color: white; font-size: 30px; cursor: pointer; font-family: sans-serif;
+                            background: none; border: none;
                         }
                     `;
                     innerDoc.head.appendChild(style);
+                }
+
+                // --- 2. VIDEO POPUP LOGIC ---
+                // Find the first video element in the design
+                var originalVideo = innerDoc.querySelector('video');
+
+                if (originalVideo) {
+                    // Get the source URL of the video
+                    var videoSrc = originalVideo.querySelector('source') ? originalVideo.querySelector('source').src : originalVideo.src;
+                    
+                    // Find the container holding the video
+                    var videoContainer = originalVideo.parentNode;
+
+                    // HIDE the original video (so the image behind it shows)
+                    originalVideo.style.display = 'none';
+
+                    // Make the container clickable
+                    videoContainer.style.cursor = 'pointer';
+                    videoContainer.setAttribute('title', 'Click to play video');
+
+                    // Create the Modal HTML
+                    var modalHTML = `
+                        <div id="videoModalOverlay">
+                            <div class="modal-content">
+                                <button class="close-btn" onclick="closeVideoModal()">&#10005; Close</button>
+                                <video id="popupVideo" controls>
+                                    <source src="${videoSrc}" type="video/mp4">
+                                </video>
+                            </div>
+                        </div>
+                    `;
+                    // Add Modal to the page body
+                    var div = innerDoc.createElement('div');
+                    div.innerHTML = modalHTML;
+                    innerDoc.body.appendChild(div);
+
+                    // --- CLICK EVENT: OPEN MODAL ---
+                    videoContainer.onclick = function() {
+                        var overlay = innerDoc.getElementById('videoModalOverlay');
+                        var popupVid = innerDoc.getElementById('popupVideo');
+                        
+                        overlay.classList.add('active'); // Show modal
+                        popupVid.currentTime = 0;        // Reset video
+                        popupVid.play();                 // Auto play
+                    };
+
+                    // --- FUNCTION TO CLOSE MODAL ---
+                    innerDoc.defaultView.closeVideoModal = function() {
+                        var overlay = innerDoc.getElementById('videoModalOverlay');
+                        var popupVid = innerDoc.getElementById('popupVideo');
+                        
+                        overlay.classList.remove('active'); // Hide modal
+                        popupVid.pause();                   // Stop video
+                    };
                 }
             }
         </script>
 	</head>
     
-    <!-- Delay slightly to ensure InDesign has created the divs before we measure them -->
 	<body onload="showHideArrows()">
-		<iframe onload="showHideArrows(); setTimeout(forceCenterLayout, 200);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
+        <!-- Added longer delay (500ms) to ensure video tags are fully loaded before we hack them -->
+		<iframe onload="showHideArrows(); setTimeout(injectCustomScripts, 500);" id="contentIFrame" class="contentIframeClass" src="publication-web-resources/html/publication.html"></iframe>
 		
         <iframe id="dummyIFrame" class="dummyFrameClass"></iframe>
 		<div class="prev" onclick="showPreviousPage()">&#10094;</div>
