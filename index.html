@@ -60,7 +60,6 @@
 						if (mainDiv) {
 							var w = parseFloat(mainDiv.style.width) || mainDiv.offsetWidth || 595;
 							var h = parseFloat(mainDiv.style.height) || mainDiv.offsetHeight || 842;
-							
 							var halfW = w / 2;
 							var halfH = h / 2;
 
@@ -74,6 +73,7 @@
 									height: 100vh !important;
 									width: 100vw !important;
 								}
+								/* Use specific selector for the main wrapper to avoid conflicts */
 								body > div:first-child {
 									position: absolute !important;
 									left: 50% !important;
@@ -82,12 +82,18 @@
 									margin-top: -${halfH}px !important;
 									box-shadow: 0 0 30px rgba(0,0,0,0.1); 
 									transform-origin: center center !important;
+									overflow: visible !important; /* Allow buttons to pop out */
 								}
 
-								/* 2. FIX CLIPPED BUTTON EDGES (New Code) */
-								/* This tells the browser: Let the content spill out of the box if needed */
-								div[id^="_idContainer"], ._idGenButton, ._idGenButton div {
+								/* 2. FIX CLIPPED BUTTON EDGES (UPDATED) */
+								/* We select everything inside the buttons and force it to show */
+								div[id^="_idContainer"], 
+								._idGenButton, 
+								._idGenButton div, 
+								._idGenButton img,
+								._idGenButton p {
 									overflow: visible !important;
+									clip: auto !important;
 								}
 
 								/* 3. Video Popup Styles */
@@ -119,33 +125,36 @@
 							videoContainer.style.cursor = 'pointer';
 							videoContainer.setAttribute('title', 'Play Video');
 
-							var modalDiv = innerDoc.createElement('div');
-							modalDiv.innerHTML = `
-								<div id="videoModalOverlay">
-									<div class="modal-content">
-										<button class="close-btn" id="btnCloseVid">CLOSE X</button>
-										<video id="popupVideo" controls>
-											<source src="${videoSrc}" type="video/mp4">
-										</video>
+							// Avoid creating duplicate modals if script runs twice
+							if (!innerDoc.getElementById('videoModalOverlay')) {
+								var modalDiv = innerDoc.createElement('div');
+								modalDiv.innerHTML = `
+									<div id="videoModalOverlay">
+										<div class="modal-content">
+											<button class="close-btn" id="btnCloseVid">CLOSE X</button>
+											<video id="popupVideo" controls>
+												<source src="${videoSrc}" type="video/mp4">
+											</video>
+										</div>
 									</div>
-								</div>
-							`;
-							innerDoc.body.appendChild(modalDiv);
+								`;
+								innerDoc.body.appendChild(modalDiv);
 
-							videoContainer.onclick = function() {
-								var overlay = innerDoc.getElementById('videoModalOverlay');
-								var popupVid = innerDoc.getElementById('popupVideo');
-								overlay.classList.add('active');
-								popupVid.currentTime = 0;
-								popupVid.play();
-							};
+								videoContainer.onclick = function() {
+									var overlay = innerDoc.getElementById('videoModalOverlay');
+									var popupVid = innerDoc.getElementById('popupVideo');
+									overlay.classList.add('active');
+									popupVid.currentTime = 0;
+									popupVid.play();
+								};
 
-							innerDoc.getElementById('btnCloseVid').onclick = function() {
-								var overlay = innerDoc.getElementById('videoModalOverlay');
-								var popupVid = innerDoc.getElementById('popupVideo');
-								overlay.classList.remove('active');
-								popupVid.pause();
-							};
+								innerDoc.getElementById('btnCloseVid').onclick = function() {
+									var overlay = innerDoc.getElementById('videoModalOverlay');
+									var popupVid = innerDoc.getElementById('popupVideo');
+									overlay.classList.remove('active');
+									popupVid.pause();
+								};
+							}
 						}
 
 					} catch(e) {
